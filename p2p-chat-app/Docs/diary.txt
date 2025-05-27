@@ -1,0 +1,6 @@
+27.5.25
+So we started working on the new Project. It is a P2P Chat App. The first step is to create a terminal-based version
+of what we want to achieve. We will use python for this. We started to create our first class named peer. This class
+will be responsible for handling the peer's information. It will represent a user/device in our P2P network.
+It has a unique ID, a list of connected peers, a username, a host IP and a port number.
+
