@@ -1,52 +1,85 @@
+# UDP P2P Chat Client
+# Dieses Skript verbindet sich mit einem Rendezvous-Server, erhält Peer-Informationen,
+# führt UDP Hole Punching durch und ermöglicht dann den direkten Chat zwischen zwei Peers.
+
 import socket
-import sys
+import json
 import threading
+from datetime import datetime
 
-# The address of the rendezvous server (usually your own machine or a public server)
-rendezvous = ('127.0.0.1', 55555)  # Replace with actual IP if needed
+# Benutzername für diesen Peer abfragen
+USERNAME = input("Enter your username: ")
 
-# Create a UDP socket and bind to an available random port
+# Adresse des Rendezvous-Servers (IP, Port)
+RENDEZVOUS = ('127.0.0.1', 55555)
+
+# UDP-Socket erstellen und an einen zufälligen lokalen Port binden
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('0.0.0.0', 0))  # OS chooses an available port
+sock.bind(('0.0.0.0', 0))  # 0 = beliebiger freier Port
 my_port = sock.getsockname()[1]
 
-print(f'[Client] Connecting to rendezvous server at {rendezvous[0]}:{rendezvous[1]}')
-sock.sendto(b'hello', rendezvous)  # Step 1: Notify the server that we're here
+print(f"[{USERNAME}] Using local port: {my_port}")
+print(f"[{USERNAME}] Contacting rendezvous server at {RENDEZVOUS}")
 
-# Step 2: Wait for the 'ready' signal and peer information
+# Kontaktaufnahme mit dem Rendezvous-Server
+sock.sendto(b'hello', RENDEZVOUS)
+
+# Warten auf Peer-Informationen vom Server
 while True:
-    data, addr = sock.recvfrom(1024)
+    data, _ = sock.recvfrom(1024)
     msg = data.decode().strip()
 
     if msg == 'ready':
-        print('[Client] Received ready from rendezvous server, waiting for peer...')
+        # Server signalisiert, dass der Peer registriert ist, aber noch kein zweiter Peer da ist
+        print(f"[{USERNAME}] Waiting for peer to connect...")
         continue
 
-    # Once peer info is received, break the loop
+    # Wenn keine 'ready'-Nachricht, dann Peer-Info empfangen
     peer_ip, peer_sport, peer_dport = msg.split()
     peer_sport = int(peer_sport)
     peer_dport = int(peer_dport)
     break
 
-print(f"\n[Client] Peer info received:")
-print(f"  IP:            {peer_ip}")
-print(f"  Source port:   {peer_sport}")
-print(f"  Destination port: {peer_dport}\n")
+print(f"[{USERNAME}] Connected to peer at {peer_ip}:{peer_sport} (sending) / {peer_dport} (receiving)")
 
-# Step 3: Perform UDP hole punching by sending a dummy message to peer's port
-print(f'[Client] Punching hole to {peer_ip}:{peer_dport}')
-sock.sendto(b'punch', (peer_ip, peer_dport))
-
-# Step 4: Start a background thread to listen for incoming messages from the peer
+# Listener-Thread für eingehende Nachrichten starten
 def listen():
     while True:
         data, _ = sock.recvfrom(1024)
-        print(f'\rPeer: {data.decode()}\n> ', end='')
+        try:
+            decoded = data.decode().strip()
+            if not decoded.startswith('{'):
+                continue  # Ignore non-JSON messages like "punch"
+
+            message = json.loads(decoded)
+            msg_type = message.get("type", "message")
+
+            if msg_type == "message":
+                name = message.get("name", "Unknown")
+                timestamp = message.get("timestamp", "")
+                text = message.get("text", "")
+                print(f"\r[{timestamp}] {name}: {text}\n> ", end='')
+            else:
+                print(f'\r[Unknown message type: {msg_type}] {decoded}\n> ', end='')
+        except Exception as e:
+            print(f'\r[Error] {e}\n> ', end='')
 
 threading.Thread(target=listen, daemon=True).start()
 
-# Step 5: Main loop to send messages to the peer
-print('[Client] You can now send messages to the peer.\n')
+# UDP Hole Punching: Dummy-Pakete an beide Peer-Ports senden, um NAT zu durchdringen
+print(f"[{USERNAME}] Punching hole...")
+sock.sendto(b'punch', (peer_ip, peer_dport))
+sock.sendto(b'punch', (peer_ip, peer_sport))
+
+# Haupt-Chat-Schleife: Nachrichten eingeben und an den Peer senden
+print("[System] You can now chat:")
 while True:
-    msg = input('> ')
-    sock.sendto(msg.encode(), (peer_ip, peer_sport))
+    msg = input("> ")
+    message = {
+        "type": "message",
+        "name": USERNAME,
+        "timestamp": datetime.utcnow().isoformat(),
+        "text": msg
+    }
+    # Nachricht als JSON an den Peer senden
+    sock.sendto(json.dumps(message).encode(), (peer_ip, peer_sport))

@@ -4,3 +4,26 @@ of what we want to achieve. We will use python for this. We started to create ou
 will be responsible for handling the peer's information. It will represent a user/device in our P2P network.
 It has a unique ID, a list of connected peers, a username, a host IP and a port number.
 
+28.5.25
+Today, we resolved a critical issue in our P2P chat application and reached a stable, functional version of the
+basic terminal chat client. We were initially facing a problem where messages weren’t being received correctly
+between peers. After a careful review of the socket logic and message flow, we identified several improvements
+that made a significant difference.
+
+irst, we ensured that both message sending and receiving used a single UDP socket, which eliminated binding
+conflicts and guaranteed that incoming messages arrived at the correct port. We also improved our UDP hole punching mechanism
+by sending dummy packets to both the peer’s source and destination ports, helping NATs maintain open pathways on each
+side. Additionally, we moved the message listener thread to start before initiating the punch, which prevented us from
+missing messages that could arrive immediately after the rendezvous exchange.
+
+Another big enhancement was switching from raw string messages to JSON-formatted payloads. Each message now includes
+a type, name, timestamp, and text field, making communication more structured and extensible. This structure not only
+future-proofs our protocol but also improves the clarity of chat output in the terminal.
+The result of these updates is a responsive, reliable, and clean chat experience between two peers — with each user
+seeing timestamped messages in real time. It now feels like a real chat app, albeit a basic one.
+
+Looking ahead, we plan to integrate the Peer class more directly into the chat flow, allowing each client to manage
+its identity and peer state. We’ll also start thinking about supporting multiple peers, introducing message
+encryption, and preparing the ground for potential GUI development. But for now, we’re proud of the fact that two
+users can now chat directly over a network without a central server relaying their messages. That’s a true milestone
+for this project.
