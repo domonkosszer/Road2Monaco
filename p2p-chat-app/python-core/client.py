@@ -10,6 +10,10 @@ import time
 import stun
 from datetime import datetime
 from cryptography.fernet import Fernet
+import base64
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 
 # Benutzername eingeben
 USERNAME = input("Enter your username: ")
@@ -18,12 +22,22 @@ USERNAME = input("Enter your username: ")
 RENDEZVOUS = ('127.0.0.1', 55555)
 
 # Symmetrischer Schlüssel für Fernet-Verschlüsselung (in der Praxis: vorher sicher austauschen)
-# FERNET_KEY = Fernet.generate_key()
-FERNET_KEY =  Fernet.generate_key()
+# Passwort eingeben
+password = input("Enter shared password: ").encode()
+salt = b'static_salt_12345678'  # In practice, use a unique, shared salt or exchange it securely
+kdf = PBKDF2HMAC(
+    algorithm=hashes.SHA256(),
+    length=32,
+    salt=salt,
+    iterations=100_000,
+    backend=default_backend()
+)
+FERNET_KEY = base64.urlsafe_b64encode(kdf.derive(password))
 fernet = Fernet(FERNET_KEY)
 print(f"[System] Share this key securely with your peer to enable decryption: {FERNET_KEY.decode()}")
-
+# print(f"[System] Share this key securely with your peer to enable decryption: {FERNET_KEY.decode()}")
 # Lokale Datei zur Protokollierung des Chatverlaufs
+
 chat_log_file = f"chat_log_{USERNAME}.txt"
 
 def log_message(msg):
