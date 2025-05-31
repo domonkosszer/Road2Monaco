@@ -10,7 +10,7 @@ basic terminal chat client. We were initially facing a problem where messages we
 between peers. After a careful review of the socket logic and message flow, we identified several improvements
 that made a significant difference.
 
-irst, we ensured that both message sending and receiving used a single UDP socket, which eliminated binding
+First, we ensured that both message sending and receiving used a single UDP socket, which eliminated binding
 conflicts and guaranteed that incoming messages arrived at the correct port. We also improved our UDP hole punching mechanism
 by sending dummy packets to both the peer’s source and destination ports, helping NATs maintain open pathways on each
 side. Additionally, we moved the message listener thread to start before initiating the punch, which prevented us from
@@ -27,3 +27,21 @@ its identity and peer state. We’ll also start thinking about supporting multip
 encryption, and preparing the ground for potential GUI development. But for now, we’re proud of the fact that two
 users can now chat directly over a network without a central server relaying their messages. That’s a true milestone
 for this project.
+
+May 29, 2025
+Today, we reached the next development milestone of our P2P chat client. We’ve integrated end-to-end encryption using
+Fernet, meaning all messages are now transmitted securely. The key still needs to be exchanged manually between peers
+for now, but this already significantly improves communication security.
+
+We’ve also introduced local chat logging: every sent and received message is now saved to a file with a timestamp.
+This not only helps with debugging but also makes the chat traceable.
+
+Another new feature is peer monitoring: the system now detects when the other peer has been unreachable for an extended
+period and informs the user accordingly. In addition, we’ve implemented simple chat commands like /help, /quit, and
+/who to improve usability.
+
+The integration of the STUN protocol for NAT type detection is working reliably and provides valuable insights into the
+network environment. Overall, the chat client now feels much more mature and secure.
+
+Next, we plan to automate key exchange and further develop the peer class to manage multiple connections. A graphical
+user interface also remains on our roadmap.
