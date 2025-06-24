@@ -1,5 +1,9 @@
+import json
+
 from cryptography.fernet import Fernet
 import base64
+import hmac
+import hashlib
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
@@ -22,22 +26,26 @@ class EncryptionHandler:
         )
         key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
         self.fernet = Fernet(key)
+        self.hmac_key = key
 
-    def encrypt(self, message: str) -> str:
-        """
-        Encrypts a message using Fernet.
-        Returns:
-            str: Encrypted and base64-encoded message.
-        """
-        return self.fernet.encrypt(message.encode()).decode()
-
-    def decrypt(self, token: str) -> str:
-        """
-        Decrypts a base64-encoded message.
-        Returns:
-            str: Decrypted plain text, or fallback message on failure.
-        """
+    def encrypt(self, message: str) -> dict:
+        ciphertext = self.fernet.encrypt(message.encode())
+        sig = hmac.new(self.hmac_key, ciphertext, hashlib.sha256).hexdigest()
+        return {
+            "text": ciphertext.decode(),
+            "hmac": sig
+        }
+    def decrypt(self, payload: dict) -> str:
         try:
-            return self.fernet.decrypt(token.encode()).decode()
-        except Exception:
-            return "[Encrypted message could not be decrypted]"
+            ciphertext = payload["text"].encode()
+            received_sig = payload["hmac"]
+            calc_sig = hmac.new(self.hmac_key, ciphertext, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(received_sig, calc_sig):
+                return "[Invalid signature]"
+            return self.fernet.decrypt(ciphertext).decode()
+        except Exception as e:
+            return f"[Decryption or HMAC error: {e}]"
+
+    def verify_hmac(self, message: bytes, received_hmac: str) -> bool:
+        calc_hmac = hmac.new(self.hmac_key, message, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(calc_hmac, received_hmac)

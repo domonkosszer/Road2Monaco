@@ -4,6 +4,7 @@
 
 import socket
 import json
+import sys
 import threading
 import time
 import stun
@@ -34,6 +35,8 @@ def get_nat_info():
     except OSError as e:
         print(f"[Error] Failed to perform STUN lookup: {e}")
         sys.exit(1)
+        return None
+
 
 # Create and bind socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -72,10 +75,15 @@ def listen():
             message = MessageFormatter.parse_message(data)
             msg_type = message.get("type", "message")
             if msg_type == "message":
+                payload = message.get("payload", {})
+                encrypted_text = payload.get("text", "")
+                received_hmac = payload.get("hmac", "")
+                if not encryption_handler.verify_hmac(encrypted_text.encode(), received_hmac):
+                    print(f"\r[{message.get('timestamp', '')}] {message.get('name', 'Unknown')}: [Invalid signature]\n> ", end='')
+                    continue
+                text = encryption_handler.decrypt(payload)
                 name = message.get("name", "Unknown")
                 timestamp = message.get("timestamp", "")
-                encrypted_text = message.get("text", "")
-                text = encryption_handler.decrypt(encrypted_text)
                 formatted = f"[{timestamp}] {name}: {text}"
                 print(f"\r{formatted}\n> ", end='')
                 chat_logger.log(formatted)
@@ -139,8 +147,8 @@ while True:
         handle_command(msg)
         continue
     try:
-        encrypted_text = encryption_handler.encrypt(msg)
-        message = MessageFormatter.create_message(USERNAME, encrypted_text)
+        encrypted_payload = encryption_handler.encrypt(msg)
+        message = MessageFormatter.create_message(USERNAME, encrypted_payload)
         sock.sendto(message.encode(), (peer.ip, peer.sport))
     except Exception as e:
         print(f"[Error] Failed to encrypt/send message: {e}")

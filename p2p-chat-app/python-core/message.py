@@ -7,12 +7,12 @@ class MessageFormatter:
     """
 
     @staticmethod
-    def create_message(username: str, encrypted_text: str) -> str:
+    def create_message(username: str, payload: dict) -> str:
         """
-        Creates a JSON message with metadata.
+        Creates a JSON message with metadata and signed encrypted payload.
         Args:
             username (str): Sender's username.
-            encrypted_text (str): Encrypted message body.
+            payload (dict): Encrypted and signed message body as a dictionary.
         Returns:
             str: JSON-formatted string.
         """
@@ -20,7 +20,7 @@ class MessageFormatter:
             "type": "message",
             "name": username,
             "timestamp": datetime.utcnow().isoformat(),
-            "text": encrypted_text
+            "payload": payload
         })
 
     @staticmethod

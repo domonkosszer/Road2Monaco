@@ -1,11 +1,2 @@
-[2025-05-31T11:13:19.052410] Pascal: [Encrypted message could not be decrypted]
-[2025-05-31T11:16:16.625872] Pascal: Hello
-[2025-05-31T13:43:59.459544] Pascal: Hellooo
-[2025-05-31T13:44:13.934706] Pascal: wuhuuuuu
-[2025-05-31T13:46:11.547242] Pascal: Yessit
-[2025-06-01T11:48:31.486783] Giulia: [Encrypted message could not be decrypted]
-[2025-06-01T11:50:06.621096] Giulia: Hellou
-[2025-06-02T10:53:08.257576] Pascal: Hi whats good?
-[2025-06-02T10:53:21.006906] Pascal: sadfjasdofjoaisdjfsaio
-[2025-06-24T10:21:30.828189] Pascal : Hello
-[2025-06-24T10:21:43.769114] Pascal : Helloo
+[2025-06-24T11:04:17.556418] Pas : [Decryption or HMAC error: string indices must be integers]
+[2025-06-24T11:09:41.050780] Fred: Hello
