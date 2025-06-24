@@ -27,6 +27,8 @@ class EncryptionHandler:
         key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
         self.fernet = Fernet(key)
         self.hmac_key = key
+        self.password = password
+        self.salt = salt
 
     def encrypt(self, message: str) -> dict:
         ciphertext = self.fernet.encrypt(message.encode())

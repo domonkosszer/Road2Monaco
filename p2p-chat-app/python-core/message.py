@@ -7,21 +7,19 @@ class MessageFormatter:
     """
 
     @staticmethod
-    def create_message(username: str, payload: dict) -> str:
+    def create_message(username: str, payload: dict, meta: dict = None) -> str:
         """
-        Creates a JSON message with metadata and signed encrypted payload.
-        Args:
-            username (str): Sender's username.
-            payload (dict): Encrypted and signed message body as a dictionary.
-        Returns:
-            str: JSON-formatted string.
+        Creates a JSON message with optional metadata and signed encrypted payload.
         """
-        return json.dumps({
+        message = {
             "type": "message",
             "name": username,
             "timestamp": datetime.utcnow().isoformat(),
             "payload": payload
-        })
+        }
+        if meta:
+            message["meta"] = meta
+        return json.dumps(message)
 
     @staticmethod
     def parse_message(data: bytes) -> dict:

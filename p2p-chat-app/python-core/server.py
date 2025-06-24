@@ -26,9 +26,8 @@ signal.signal(signal.SIGTERM, shutdown_server)
 
 try:
     while True:
-        clients = []  # Liste für die Adressen der verbundenen Clients
-
         # Warte, bis sich zwei Clients gemeldet haben
+        clients = []
         while len(clients) < 2:
             data, addr = sock.recvfrom(1024)
             if not data:

@@ -3,6 +3,8 @@
 # and enables end-to-end encrypted messaging with local chat logging.
 
 import socket
+import os
+import base64
 import json
 import sys
 import threading
@@ -13,14 +15,19 @@ from encryption import EncryptionHandler
 from peer import PeerInfo
 from message import MessageFormatter
 from logger import ChatLogger
+from peers import get_peer_salt, save_peer_salt
 
 # Prompt for user input
 USERNAME = input("Enter your username: ")
 RENDEZVOUS = ('127.0.0.1', 55555)
 password = input("Enter shared password: ")
+encryption_handler = None
+shared_state = {
+    "salt_from_peer": None,
+    "salt_loaded": False
+}
 
 # Initialize components
-encryption_handler = EncryptionHandler(password)
 chat_logger = ChatLogger(USERNAME)
 print(f"[System] Share this key securely with your peer to enable decryption.")
 
@@ -67,30 +74,52 @@ last_seen = time.time()
 
 # Listening thread
 def listen():
-    global last_seen
+    global last_seen, encryption_handler
     while True:
         data, _ = sock.recvfrom(1024)
         last_seen = time.time()
         try:
             message = MessageFormatter.parse_message(data)
             msg_type = message.get("type", "message")
+
+            # STEP 1: Initialize encryption with salt if provided
+            if "meta" in message and "salt" in message["meta"]:
+                imported_salt = base64.b64decode(message["meta"]["salt"])
+                encryption_handler = EncryptionHandler(password, imported_salt)
+                save_peer_salt(f"{peer.ip}:{peer.sport}", imported_salt)
+
+                shared_state["salt_from_peer"] = imported_salt
+                shared_state["salt_loaded"] = True
+                print(f"[System] Imported salt from peer.")
+
+            # STEP 2: Skip message until encryption handler is valid
+            if encryption_handler is None:
+                print(f"\r[Warning] Message received before key was initialized.\n> ", end='')
+                continue
+
+            # STEP 3: Process normal messages
             if msg_type == "message":
                 payload = message.get("payload", {})
-                encrypted_text = payload.get("text", "")
+                ciphertext = payload.get("text", "")
                 received_hmac = payload.get("hmac", "")
-                if not encryption_handler.verify_hmac(encrypted_text.encode(), received_hmac):
+
+                if not encryption_handler.verify_hmac(ciphertext.encode(), received_hmac):
                     print(f"\r[{message.get('timestamp', '')}] {message.get('name', 'Unknown')}: [Invalid signature]\n> ", end='')
                     continue
+
                 text = encryption_handler.decrypt(payload)
                 name = message.get("name", "Unknown")
                 timestamp = message.get("timestamp", "")
                 formatted = f"[{timestamp}] {name}: {text}"
                 print(f"\r{formatted}\n> ", end='')
                 chat_logger.log(formatted)
+
             elif msg_type == "ping":
                 continue
+
             else:
                 print(f'\r[Unknown message type: {msg_type}]\n> ', end='')
+
         except Exception as e:
             print(f'\r[Error] {e}\n> ', end='')
 
@@ -138,6 +167,23 @@ def handle_command(cmd):
         print(f"[System] Unknown command: {cmd}\nType /help for available commands.")
 
 # Main input loop
+# Generate salt once
+peer_id = f"{peer.ip}:{peer.sport}"
+for _ in range(20):
+    if shared_state["salt_from_peer"]:
+        break
+    time.sleep(0.1)
+
+saved_salt = shared_state["salt_from_peer"] or get_peer_salt(peer_id)
+first_message = False
+if saved_salt:
+    encryption_handler = EncryptionHandler(password, saved_salt)
+    print(f"[System] Loaded known salt for {peer_id}")
+else:
+    salt = os.urandom(16)
+    encryption_handler = EncryptionHandler(password, salt)
+    first_message = True  # we must embed salt in the first message
+
 print("[System] You can now chat:")
 while True:
     msg = input("> ").strip()
@@ -148,7 +194,19 @@ while True:
         continue
     try:
         encrypted_payload = encryption_handler.encrypt(msg)
-        message = MessageFormatter.create_message(USERNAME, encrypted_payload)
+
+        # Wenn Peer-Salt noch nicht bestätigt ist, sende Salt weiterhin mit
+        if not shared_state["salt_loaded"]:
+            meta = {
+                "salt": base64.b64encode(salt).decode()
+            }
+            message = MessageFormatter.create_message(USERNAME, encrypted_payload, meta)
+        else:
+            message = MessageFormatter.create_message(USERNAME, encrypted_payload)
+
         sock.sendto(message.encode(), (peer.ip, peer.sport))
+        save_peer_salt(peer_id, salt)
+
     except Exception as e:
-        print(f"[Error] Failed to encrypt/send message: {e}")
+        print("\n[System] Chat beendet. Auf Wiedersehen!")
+        sys.exit(0)
