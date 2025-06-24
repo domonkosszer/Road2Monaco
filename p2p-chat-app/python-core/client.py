@@ -25,11 +25,15 @@ print(f"[System] Share this key securely with your peer to enable decryption.")
 
 # Get NAT information
 def get_nat_info():
-    nat_type, external_ip, external_port = stun.get_ip_info()
-    print(f"[STUN] NAT Type: {nat_type}")
-    print(f"[STUN] External IP: {external_ip}")
-    print(f"[STUN] External Port: {external_port}")
-    return nat_type, external_ip, external_port
+    try:
+        nat_type, external_ip, external_port = stun.get_ip_info(source_port=0)
+        print(f"[STUN] NAT Type: {nat_type}")
+        print(f"[STUN] External IP: {external_ip}")
+        print(f"[STUN] External Port: {external_port}")
+        return nat_type, external_ip, external_port
+    except OSError as e:
+        print(f"[Error] Failed to perform STUN lookup: {e}")
+        sys.exit(1)
 
 # Create and bind socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

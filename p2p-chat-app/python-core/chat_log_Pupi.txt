@@ -7,3 +7,5 @@
 [2025-06-01T11:50:06.621096] Giulia: Hellou
 [2025-06-02T10:53:08.257576] Pascal: Hi whats good?
 [2025-06-02T10:53:21.006906] Pascal: sadfjasdofjoaisdjfsaio
+[2025-06-24T10:21:30.828189] Pascal : Hello
+[2025-06-24T10:21:43.769114] Pascal : Helloo
