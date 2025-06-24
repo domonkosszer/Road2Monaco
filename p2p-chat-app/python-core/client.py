@@ -22,6 +22,7 @@ USERNAME = input("Enter your username: ")
 RENDEZVOUS = ('127.0.0.1', 55555)
 password = input("Enter shared password: ")
 encryption_handler = None
+peer_online = True
 shared_state = {
     "salt_from_peer": None,
     "salt_loaded": False
@@ -78,11 +79,18 @@ def listen():
     while True:
         data, _ = sock.recvfrom(1024)
         last_seen = time.time()
+
         try:
+            decoded = data.decode().strip()
+
+            # Skip non-JSON messages like 'punch'
+            if decoded in ["punch", "hello"]:
+                continue
+
             message = MessageFormatter.parse_message(data)
             msg_type = message.get("type", "message")
 
-            # STEP 1: Initialize encryption with salt if provided
+            # Salt handling...
             if "meta" in message and "salt" in message["meta"]:
                 imported_salt = base64.b64decode(message["meta"]["salt"])
                 encryption_handler = EncryptionHandler(password, imported_salt)
@@ -92,12 +100,11 @@ def listen():
                 shared_state["salt_loaded"] = True
                 print(f"[System] Imported salt from peer.")
 
-            # STEP 2: Skip message until encryption handler is valid
+            # Skip until encryption is ready
             if encryption_handler is None:
                 print(f"\r[Warning] Message received before key was initialized.\n> ", end='')
                 continue
 
-            # STEP 3: Process normal messages
             if msg_type == "message":
                 payload = message.get("payload", {})
                 ciphertext = payload.get("text", "")
@@ -124,11 +131,17 @@ def listen():
             print(f'\r[Error] {e}\n> ', end='')
 
 # Peer availability check
+
 def monitor_peer(timeout=30):
+    global peer_online
     while True:
         time.sleep(5)
         if time.time() - last_seen > timeout:
-            print(f"\n[System] Peer appears to be offline or unreachable.\n> ", end='')
+            if peer_online:
+                print(f"\n[System] Peer appears to be offline or unreachable.\n> ", end='')
+                peer_online = False
+        else:
+            peer_online = True
 
 # Send periodic keep-alive messages
 def keepalive():
@@ -157,17 +170,45 @@ threading.Thread(target=keepalive, daemon=True).start()
 # Command handling
 def handle_command(cmd):
     if cmd == "/help":
-        print("\nAvailable commands:\n  /help    Show this help message\n  /quit    Exit the chat\n  /who     Show peer info\n")
+        print("\nAvailable commands:\n  /help    Show this help message\n  /quit    Exit the chat\n  /who     Show peer info\n  /reconnect    Attempt to reconnect to peer\n")
     elif cmd == "/quit":
         print("[System] Quitting...")
         exit(0)
     elif cmd == "/who":
         print(f"[System] Peer: {peer}")
-    else:
-        print(f"[System] Unknown command: {cmd}\nType /help for available commands.")
+    elif cmd == "/reconnect":
+        print(f"[System] Re-contacting rendezvous server...")
+        try:
+            sock.sendto(b'hello', RENDEZVOUS)
 
-# Main input loop
+            # Wait for peer info again
+            while True:
+                data, _ = sock.recvfrom(1024)
+                msg = data.decode().strip()
+                if msg == 'ready':
+                    print(f"[System] Waiting for peer to connect...")
+                    continue
+                peer_ip, peer_sport, peer_dport = msg.split()
+                peer.ip = peer_ip
+                peer.sport = int(peer_sport)
+                peer.dport = int(peer_dport)
+                print(f"[System] Reconnected to peer at {peer}")
+                break
+
+            # Re-initiate hole punching
+            print(f"[System] Sending punch packets to {peer}...")
+            sock.sendto(b'punch', (peer.ip, peer.dport))
+            sock.sendto(b'punch', (peer.ip, peer.sport))
+
+            peer_id = f"{peer.ip}:{peer.sport}"
+
+        except Exception as e:
+            print(f"[System] Reconnect failed: {e}")
+    else:
+        print(f"[System] Unknown command: {cmd}\nType /help for available commands.")# Main input loop
+
 # Generate salt once
+salt = None
 peer_id = f"{peer.ip}:{peer.sport}"
 for _ in range(20):
     if shared_state["salt_from_peer"]:
@@ -177,6 +218,7 @@ for _ in range(20):
 saved_salt = shared_state["salt_from_peer"] or get_peer_salt(peer_id)
 first_message = False
 if saved_salt:
+    salt = saved_salt
     encryption_handler = EncryptionHandler(password, saved_salt)
     print(f"[System] Loaded known salt for {peer_id}")
 else:
@@ -202,11 +244,11 @@ while True:
             }
             message = MessageFormatter.create_message(USERNAME, encrypted_payload, meta)
         else:
-            message = MessageFormatter.create_message(USERNAME, encrypted_payload)
+            message = MessageFormatter.create_mes<sage(USERNAME, encrypted_payload)
 
         sock.sendto(message.encode(), (peer.ip, peer.sport))
         save_peer_salt(peer_id, salt)
 
     except Exception as e:
-        print("\n[System] Chat beendet. Auf Wiedersehen!")
-        sys.exit(0)
+        print(f"\n[System] Chat error: {e}")
+        sys.exit(1)
