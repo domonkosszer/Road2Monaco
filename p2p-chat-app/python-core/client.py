@@ -21,12 +21,16 @@ from peers import get_peer_salt, save_peer_salt
 USERNAME = input("Enter your username: ")
 RENDEZVOUS = ('127.0.0.1', 55555)
 password = input("Enter shared password: ")
+GROUP_ID = input("Enter group name: ").strip()
 encryption_handler = None
 peer_online = True
 shared_state = {
     "salt_from_peer": None,
     "salt_loaded": False
 }
+
+encryption_handlers = {}
+last_seen_peers = {}
 
 # Initialize components
 chat_logger = ChatLogger(USERNAME)
@@ -55,54 +59,85 @@ nat_type, ext_ip, ext_port = get_nat_info()
 my_port = sock.getsockname()[1]
 print(f"[{USERNAME}] Using local port: {my_port}")
 print(f"[{USERNAME}] Contacting rendezvous server at {RENDEZVOUS}")
-sock.sendto(b'hello', RENDEZVOUS)
 
-# Wait for peer data
+
+sock.sendto(GROUP_ID.encode(), RENDEZVOUS)
+peers = []
+peer_ids = set()
+
+# === Neuer Handshake: nur bis zum 'ready'-Ack ===
 while True:
     data, _ = sock.recvfrom(1024)
-    msg = data.decode().strip()
-    if msg == 'ready':
-        print(f"[{USERNAME}] Waiting for peer to connect...")
-        continue
-    peer_ip, peer_sport, peer_dport = msg.split()
-    peer = PeerInfo(peer_ip, int(peer_sport), int(peer_dport))
-    break
-
-print(f"[{USERNAME}] Connected to peer at {peer}")
+    if data.decode().strip() == 'ready':
+        print(f"[{USERNAME}] Server says 'ready' – starting listener threads …")
+        break
 
 # Track last received message time
 last_seen = time.time()
 
 # Listening thread
 def listen():
-    global last_seen, encryption_handler
+    global encryption_handlers, last_seen_peers
+    global warned_no_handler
+    warned_no_handler = set()
     while True:
-        data, _ = sock.recvfrom(1024)
-        last_seen = time.time()
-
         try:
-            decoded = data.decode().strip()
+            data, addr = sock.recvfrom(4096)
 
-            # Skip non-JSON messages like 'punch'
-            if decoded in ["punch", "hello"]:
+            if addr == RENDEZVOUS:
+                decoded = data.decode(errors='ignore').strip()
+                # Skip control messages
+                if decoded in ["ready", "punch", "hello"]:
+                    continue
+                parts = decoded.split()
+                if len(parts) == 3:
+                    ip, sport, dport = parts
+                    peer = PeerInfo(ip, int(sport), int(dport))
+                    peer_id = f"{peer.ip}:{peer.sport}"
+                    if peer_id not in peer_ids:
+                        peer_ids.add(peer_id)
+                        peers.append(peer)
+                        print(f"\n[System] Neuer Peer: {peer}\n> ", end='')
+                        # Hole Punching für neuen Peer
+                        sock.sendto(b'punch', (peer.ip, peer.dport))
+                        sock.sendto(b'punch', (peer.ip, peer.sport))
+                    continue
+
+            peer_id = f"{addr[0]}:{addr[1]}"
+            last_seen_peers[peer_id] = time.time()
+
+            # Check for non-JSON control messages early
+            try:
+                msg_preview = data[:20].decode(errors='ignore').strip()
+                if msg_preview in ["punch", "hello"]:
+                    continue
+            except Exception:
+                continue  # skip undecodable or malformed control messages
+
+            # Try to parse the full JSON message
+            try:
+                message = MessageFormatter.parse_message(data)
+            except json.JSONDecodeError as e:
+                print(f"\r[Error] Failed to parse message from {addr}: {e}\n> ", end='')
                 continue
 
-            message = MessageFormatter.parse_message(data)
             msg_type = message.get("type", "message")
 
-            # Salt handling...
+            # Salt handling
             if "meta" in message and "salt" in message["meta"]:
                 imported_salt = base64.b64decode(message["meta"]["salt"])
-                encryption_handler = EncryptionHandler(password, imported_salt)
-                save_peer_salt(f"{peer.ip}:{peer.sport}", imported_salt)
+                encryption_handlers[peer_id] = EncryptionHandler(password, imported_salt)
+                save_peer_salt(peer_id, imported_salt)
 
                 shared_state["salt_from_peer"] = imported_salt
                 shared_state["salt_loaded"] = True
                 print(f"[System] Imported salt from peer.")
 
-            # Skip until encryption is ready
-            if encryption_handler is None:
-                print(f"\r[Warning] Message received before key was initialized.\n> ", end='')
+            handler = encryption_handlers.get(peer_id)
+            if handler is None:
+                if peer_id not in warned_no_handler:
+                    print(f"\r[Info] No encryption handler for {peer_id}, waiting for salt...\n> ", end='')
+                    warned_no_handler.add(peer_id)
                 continue
 
             if msg_type == "message":
@@ -110,11 +145,11 @@ def listen():
                 ciphertext = payload.get("text", "")
                 received_hmac = payload.get("hmac", "")
 
-                if not encryption_handler.verify_hmac(ciphertext.encode(), received_hmac):
+                if not handler.verify_hmac(ciphertext.encode(), received_hmac):
                     print(f"\r[{message.get('timestamp', '')}] {message.get('name', 'Unknown')}: [Invalid signature]\n> ", end='')
                     continue
 
-                text = encryption_handler.decrypt(payload)
+                text = handler.decrypt(payload)
                 name = message.get("name", "Unknown")
                 timestamp = message.get("timestamp", "")
                 formatted = f"[{timestamp}] {name}: {text}"
@@ -133,15 +168,12 @@ def listen():
 # Peer availability check
 
 def monitor_peer(timeout=30):
-    global peer_online
     while True:
         time.sleep(5)
-        if time.time() - last_seen > timeout:
-            if peer_online:
-                print(f"\n[System] Peer appears to be offline or unreachable.\n> ", end='')
-                peer_online = False
-        else:
-            peer_online = True
+        now = time.time()
+        for peer_id, seen in list(last_seen_peers.items()):
+            if now - seen > timeout:
+                print(f"\n[System] Peer {peer_id} appears to be offline or unreachable.\n> ", end='')
 
 # Send periodic keep-alive messages
 def keepalive():
@@ -152,20 +184,41 @@ def keepalive():
                 "name": USERNAME,
                 "timestamp": datetime.utcnow().isoformat()
             }).encode()
-            sock.sendto(ping_msg, (peer.ip, peer.sport))
+            for peer in peers:
+                sock.sendto(ping_msg, (peer.ip, peer.sport))
         except Exception as e:
             print(f"\n[System] Keepalive failed: {e}\n> ", end='')
         time.sleep(10)
 
-# UDP Hole Punching
-print(f"[{USERNAME}] Punching hole...")
-sock.sendto(b'punch', (peer.ip, peer.dport))
-sock.sendto(b'punch', (peer.ip, peer.sport))
-
-# Start threads
+# Starte Hör-, Monitor- und Keepalive-Threads
 threading.Thread(target=listen, daemon=True).start()
 threading.Thread(target=monitor_peer, daemon=True).start()
 threading.Thread(target=keepalive, daemon=True).start()
+
+# Warte auf mindestens einen Peer, bevor fortgefahren wird
+print(f"[{USERNAME}] Waiting for peers in group '{GROUP_ID}'...")
+while len(peers) < 1:
+    time.sleep(0.1)
+
+# UDP Hole Punching
+
+print(f"[{USERNAME}] Punching hole...")
+for peer in peers:
+    sock.sendto(b'punch', (peer.ip, peer.dport))
+    sock.sendto(b'punch', (peer.ip, peer.sport))
+
+# Generate salt once
+salt = os.urandom(16)
+encryption_handler = EncryptionHandler(password, salt)
+first_message_sent = set()
+
+# Send our salt to each peer explicitly after hole punching
+intro_msg = MessageFormatter.create_message(USERNAME, {"text": "[intro]"}, {
+    "salt": base64.b64encode(salt).decode()
+})
+for peer in peers:
+    sock.sendto(intro_msg.encode(), (peer.ip, peer.sport))
+
 
 # Command handling
 def handle_command(cmd):
@@ -175,80 +228,77 @@ def handle_command(cmd):
         print("[System] Quitting...")
         exit(0)
     elif cmd == "/who":
-        print(f"[System] Peer: {peer}")
+        print(f"[System] Connected peers:")
+        for p in peers:
+            print(f"  - {p}")
     elif cmd == "/reconnect":
         print(f"[System] Re-contacting rendezvous server...")
         try:
-            sock.sendto(b'hello', RENDEZVOUS)
+            sock.sendto(GROUP_ID.encode(), RENDEZVOUS)
 
             # Wait for peer info again
+            peers.clear()
+            peer_ids.clear()
             while True:
                 data, _ = sock.recvfrom(1024)
                 msg = data.decode().strip()
                 if msg == 'ready':
-                    print(f"[System] Waiting for peer to connect...")
+                    print(f"[System] Waiting for peers in group '{GROUP_ID}'...")
                     continue
-                peer_ip, peer_sport, peer_dport = msg.split()
-                peer.ip = peer_ip
-                peer.sport = int(peer_sport)
-                peer.dport = int(peer_dport)
-                print(f"[System] Reconnected to peer at {peer}")
-                break
+                try:
+                    peer_ip, peer_sport, peer_dport = msg.split()
+                    peer = PeerInfo(peer_ip, int(peer_sport), int(peer_dport))
+                    peer_id = f"{peer.ip}:{peer.sport}"
+                    if peer_id not in peer_ids:
+                        peer_ids.add(peer_id)
+                        peers.append(peer)
+                        print(f"[System] Peer joined: {peer}")
+                except:
+                    continue
+
+                if len(peers) >= 1:
+                    break
 
             # Re-initiate hole punching
-            print(f"[System] Sending punch packets to {peer}...")
-            sock.sendto(b'punch', (peer.ip, peer.dport))
-            sock.sendto(b'punch', (peer.ip, peer.sport))
-
-            peer_id = f"{peer.ip}:{peer.sport}"
+            print(f"[System] Sending punch packets to peers...")
+            for peer in peers:
+                sock.sendto(b'punch', (peer.ip, peer.dport))
+                sock.sendto(b'punch', (peer.ip, peer.sport))
 
         except Exception as e:
             print(f"[System] Reconnect failed: {e}")
     else:
         print(f"[System] Unknown command: {cmd}\nType /help for available commands.")# Main input loop
 
-# Generate salt once
-salt = None
-peer_id = f"{peer.ip}:{peer.sport}"
-for _ in range(20):
-    if shared_state["salt_from_peer"]:
-        break
-    time.sleep(0.1)
-
-saved_salt = shared_state["salt_from_peer"] or get_peer_salt(peer_id)
-first_message = False
-if saved_salt:
-    salt = saved_salt
-    encryption_handler = EncryptionHandler(password, saved_salt)
-    print(f"[System] Loaded known salt for {peer_id}")
-else:
-    salt = os.urandom(16)
-    encryption_handler = EncryptionHandler(password, salt)
-    first_message = True  # we must embed salt in the first message
-
 print("[System] You can now chat:")
-while True:
-    msg = input("> ").strip()
-    if not msg:
-        continue
-    if msg.startswith("/"):
-        handle_command(msg)
-        continue
-    try:
-        encrypted_payload = encryption_handler.encrypt(msg)
+try:
+    while True:
+        msg = input("> ").strip()
+        if not msg:
+            continue
+        if msg.startswith("/"):
+            handle_command(msg)
+            continue
+        try:
+            encrypted_payload = encryption_handler.encrypt(msg)
 
-        # Wenn Peer-Salt noch nicht bestätigt ist, sende Salt weiterhin mit
-        if not shared_state["salt_loaded"]:
-            meta = {
-                "salt": base64.b64encode(salt).decode()
-            }
-            message = MessageFormatter.create_message(USERNAME, encrypted_payload, meta)
-        else:
-            message = MessageFormatter.create_mes<sage(USERNAME, encrypted_payload)
+            for peer in peers:
+                peer_id = f"{peer.ip}:{peer.sport}"
+                if peer_id not in first_message_sent:
+                    meta = {
+                        "salt": base64.b64encode(salt).decode()
+                    }
+                    message = MessageFormatter.create_message(USERNAME, encrypted_payload, meta)
+                    first_message_sent.add(peer_id)
+                else:
+                    message = MessageFormatter.create_message(USERNAME, encrypted_payload)
 
-        sock.sendto(message.encode(), (peer.ip, peer.sport))
-        save_peer_salt(peer_id, salt)
+                sock.sendto(message.encode(), (peer.ip, peer.sport))
+                save_peer_salt(peer_id, salt)
 
-    except Exception as e:
-        print(f"\n[System] Chat error: {e}")
-        sys.exit(1)
+        except Exception as e:
+            print(f"\n[System] Chat error: {e}")
+            sys.exit(1)
+except KeyboardInterrupt:
+    print("\n[System] Chat interrupted by user. Exiting.")
+    sys.exit(0)

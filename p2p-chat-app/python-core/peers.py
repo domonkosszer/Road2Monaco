@@ -9,17 +9,25 @@ DB_FILE = "known_peers.json"
 def load_known_peers():
     if not os.path.exists(DB_FILE):
         return {}
-    with open(DB_FILE, "r") as f:
-        return json.load(f)
+    try:
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        print("[Warning] Failed to load known_peers.json. Starting with empty peer DB.")
+        return {}
 
-def save_peer_salt(peer_id: str, salt: bytes):
+def save_peer_salt(peer_id: str, salt: bytes, group_id: str = None):
     db = load_known_peers()
-    db[peer_id] = base64.b64encode(salt).decode()
+    key = f"{group_id}:{peer_id}" if group_id else peer_id
+    db[key] = base64.b64encode(salt).decode()
     with open(DB_FILE, "w") as f:
         json.dump(db, f, indent=2)
 
-def get_peer_salt(peer_id: str):
+def get_peer_salt(peer_id: str, group_id: str = None):
     db = load_known_peers()
-    if peer_id in db:
-        return base64.b64decode(db[peer_id])
-    return None
+    key = f"{group_id}:{peer_id}" if group_id else peer_id
+    try:
+        return base64.b64decode(db.get(key, ""))
+    except base64.binascii.Error:
+        print(f"[Warning] Invalid salt format for peer '{key}'")
+        return None

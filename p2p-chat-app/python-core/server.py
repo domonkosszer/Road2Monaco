@@ -6,14 +6,14 @@
 import socket
 import signal
 import sys
-
-known_port = 12345  # Beispielport, der an die Peers kommuniziert wird
+from collections import defaultdict
 
 # Erstelle UDP-Socket und binde an Port 55555 (Rendezvous-Port)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('0.0.0.0', 55555))
 print("[Server] Rendezvous server is running on port 55555...")
 
+groups = defaultdict(list)
 # Graceful shutdown handler
 def shutdown_server(signum, frame):
     print("\n[Server] Shutting down gracefully...")
@@ -26,24 +26,39 @@ signal.signal(signal.SIGTERM, shutdown_server)
 
 try:
     while True:
-        # Warte, bis sich zwei Clients gemeldet haben
-        clients = []
-        while len(clients) < 2:
-            data, addr = sock.recvfrom(1024)
-            if not data:
-                continue
-            print(f"[Server] Client connected: {addr}")
-            clients.append(addr)
-            # Sende 'ready' an den Client, um zu signalisieren, dass er registriert ist
-            sock.sendto(b'ready', addr)
+        data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
+        if not data:
+            continue
+        try:
+            group_id = data.decode().strip()
+        except Exception as e:
+            print(f"[Server] Error decoding data: {e}")
+            print(f"[Server] Raw data: {data}")
 
-        # Wenn zwei Clients verbunden sind, tausche deren Adressen aus
-        c1 = clients[0]
-        c2 = clients[1]
-        # Sende c1s IP und Port an c2, und umgekehrt
-        sock.sendto(f"{c1[0]} {c1[1]} {known_port}".encode(), c2)
-        sock.sendto(f"{c2[0]} {c2[1]} {known_port}".encode(), c1)
-        print(f"[Server] Exchanged info: {c1} <--> {c2}")
+            continue
+
+        if addr not in groups[group_id]:
+            groups[group_id].append(addr)
+            print(f"[Server] {addr} joined group '{group_id}'. Current members: {groups[group_id]}")
+
+        # Always acknowledge the peer
+        sock.sendto(b'ready', addr)
+
+        # Collect current members again
+        members = groups[group_id]
+
+        # Notify the newly joined peer of all others
+        for peer in members:
+            if peer != addr:
+                info = f"{peer[0]} {peer[1]} {peer[1]}"
+                sock.sendto(info.encode(), addr)
+
+        # Notify all other peers of the new peer only
+        for peer in members:
+            if peer != addr:
+                info = f"{addr[0]} {addr[1]} {addr[1]}"
+                sock.sendto(info.encode(), peer)
+
 except Exception as e:
     print(f"[Server] Error: {e}")
 finally:
