@@ -32,7 +32,7 @@ shared_state = {
 encryption_handlers = {}
 last_seen_peers = {}
 
-# Initialize components
+# Initialize componen
 chat_logger = ChatLogger(USERNAME)
 print(f"[System] Share this key securely with your peer to enable decryption.")
 
@@ -57,8 +57,6 @@ sock.bind(('0.0.0.0', 0))
 # Display local port and contact server
 nat_type, ext_ip, ext_port = get_nat_info()
 my_port = sock.getsockname()[1]
-print(f"[{USERNAME}] Using local port: {my_port}")
-print(f"[{USERNAME}] Contacting rendezvous server at {RENDEZVOUS}")
 
 
 sock.sendto(GROUP_ID.encode(), RENDEZVOUS)
@@ -69,7 +67,6 @@ peer_ids = set()
 while True:
     data, _ = sock.recvfrom(1024)
     if data.decode().strip() == 'ready':
-        print(f"[{USERNAME}] Server says 'ready' – starting listener threads …")
         break
 
 # Track last received message time
@@ -97,7 +94,7 @@ def listen():
                     if peer_id not in peer_ids:
                         peer_ids.add(peer_id)
                         peers.append(peer)
-                        print(f"\n[System] Neuer Peer: {peer}\n> ", end='')
+                        print(f"\nNew peer joined: {peer}\n> ", end='')
                         # Hole Punching für neuen Peer
                         sock.sendto(b'punch', (peer.ip, peer.dport))
                         sock.sendto(b'punch', (peer.ip, peer.sport))
@@ -125,13 +122,13 @@ def listen():
 
             # Salt handling
             if "meta" in message and "salt" in message["meta"]:
-                imported_salt = base64.b64decode(message["meta"]["salt"])
-                encryption_handlers[peer_id] = EncryptionHandler(password, imported_salt)
-                save_peer_salt(peer_id, imported_salt)
-
-                shared_state["salt_from_peer"] = imported_salt
-                shared_state["salt_loaded"] = True
-                print(f"[System] Imported salt from peer.")
+                if peer_id not in encryption_handlers:
+                    imported_salt = base64.b64decode(message["meta"]["salt"])
+                    encryption_handlers[peer_id] = EncryptionHandler(password, imported_salt)
+                    save_peer_salt(peer_id, imported_salt, GROUP_ID)
+                    shared_state["salt_from_peer"] = imported_salt
+                    shared_state["salt_loaded"] = True
+                    print(f"[System] Imported salt from peer.")
 
             handler = encryption_handlers.get(peer_id)
             if handler is None:
@@ -202,7 +199,6 @@ while len(peers) < 1:
 
 # UDP Hole Punching
 
-print(f"[{USERNAME}] Punching hole...")
 for peer in peers:
     sock.sendto(b'punch', (peer.ip, peer.dport))
     sock.sendto(b'punch', (peer.ip, peer.sport))
@@ -220,19 +216,27 @@ for peer in peers:
     sock.sendto(intro_msg.encode(), (peer.ip, peer.sport))
 
 
+# Start a thread to print "You can now chat:" after salt is loaded
+def wait_for_salt():
+    while not shared_state["salt_loaded"]:
+        time.sleep(0.1)
+    print("You can now chat:")
+
+threading.Thread(target=wait_for_salt, daemon=True).start()
+
+
 # Command handling
 def handle_command(cmd):
     if cmd == "/help":
-        print("\nAvailable commands:\n  /help    Show this help message\n  /quit    Exit the chat\n  /who     Show peer info\n  /reconnect    Attempt to reconnect to peer\n")
+        print("\nAvailable commands:\n  /help    Show this help message\n  /quit    Exit the chat\n  /who     Show peer info\n  /reconnect    Attempt to reconnect to peer\n  /lastseen  Show last seen timestamps for known peers\n")
     elif cmd == "/quit":
-        print("[System] Quitting...")
+        print("Quitting...")
         exit(0)
     elif cmd == "/who":
-        print(f"[System] Connected peers:")
+        print("Connected peers:")
         for p in peers:
             print(f"  - {p}")
     elif cmd == "/reconnect":
-        print(f"[System] Re-contacting rendezvous server...")
         try:
             sock.sendto(GROUP_ID.encode(), RENDEZVOUS)
 
@@ -243,7 +247,6 @@ def handle_command(cmd):
                 data, _ = sock.recvfrom(1024)
                 msg = data.decode().strip()
                 if msg == 'ready':
-                    print(f"[System] Waiting for peers in group '{GROUP_ID}'...")
                     continue
                 try:
                     peer_ip, peer_sport, peer_dport = msg.split()
@@ -252,7 +255,7 @@ def handle_command(cmd):
                     if peer_id not in peer_ids:
                         peer_ids.add(peer_id)
                         peers.append(peer)
-                        print(f"[System] Peer joined: {peer}")
+                        print(f"Peer joined: {peer}")
                 except:
                     continue
 
@@ -260,17 +263,24 @@ def handle_command(cmd):
                     break
 
             # Re-initiate hole punching
-            print(f"[System] Sending punch packets to peers...")
             for peer in peers:
                 sock.sendto(b'punch', (peer.ip, peer.dport))
                 sock.sendto(b'punch', (peer.ip, peer.sport))
 
         except Exception as e:
             print(f"[System] Reconnect failed: {e}")
+    elif cmd == "/lastseen":
+        from peers import load_last_seen
+        last_seen_data = load_last_seen()
+        if not last_seen_data:
+            print("No last seen data available.")
+        else:
+            print("Last seen timestamps for known peers:")
+            for peer_id, timestamp in last_seen_data.items():
+                print(f"  {peer_id}: {timestamp}")
     else:
-        print(f"[System] Unknown command: {cmd}\nType /help for available commands.")# Main input loop
+        print(f"Unknown command: {cmd}\nType /help for available commands.")# Main input loop
 
-print("[System] You can now chat:")
 try:
     while True:
         msg = input("> ").strip()
@@ -294,7 +304,7 @@ try:
                     message = MessageFormatter.create_message(USERNAME, encrypted_payload)
 
                 sock.sendto(message.encode(), (peer.ip, peer.sport))
-                save_peer_salt(peer_id, salt)
+                # save_peer_salt(peer_id, salt)  # Avoid redundant salt logging
 
         except Exception as e:
             print(f"\n[System] Chat error: {e}")
