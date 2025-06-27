@@ -1,66 +1,69 @@
-# UDP Rendezvous Server
-# Dieses Skript implementiert einen einfachen Rendezvous-Server für P2P-Chat.
-# Er nimmt Verbindungen von zwei Clients entgegen, tauscht deren Adressen aus
-# und ermöglicht so direktes Peer-to-Peer-Messaging (z.B. für UDP Hole Punching).
-
 import socket
 import signal
 import sys
 from collections import defaultdict
 
-# Erstelle UDP-Socket und binde an Port 55555 (Rendezvous-Port)
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('0.0.0.0', 55555))
-print("[Server] Rendezvous server is running on port 55555...")
+class UDPRendezvousServer:
+    def __init__(self, host='0.0.0.0', port=55555):
+        self.host = host
+        self.port = port
+        self.groups = defaultdict(list)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.running = True
 
-groups = defaultdict(list)
-# Graceful shutdown handler
-def shutdown_server(signum, frame):
-    print("\n[Server] Shutting down gracefully...")
-    sock.close()
-    sys.exit(0)
+    def start(self):
+        self.sock.bind((self.host, self.port))
+        print(f"[Server] Rendezvous server is running on port {self.port}...")
 
-# Register the signal handler
-signal.signal(signal.SIGINT, shutdown_server)
-signal.signal(signal.SIGTERM, shutdown_server)
+        signal.signal(signal.SIGINT, self.shutdown_handler)
+        signal.signal(signal.SIGTERM, self.shutdown_handler)
 
-try:
-    while True:
-        data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
+        try:
+            while self.running:
+                self.handle_client()
+        except Exception as e:
+            print(f"[Server] Error: {e}")
+        finally:
+            self.cleanup()
+
+    def handle_client(self):
+        data, addr = self.sock.recvfrom(1024)
         if not data:
-            continue
+            return
+
         try:
             group_id = data.decode().strip()
         except Exception as e:
             print(f"[Server] Error decoding data: {e}")
             print(f"[Server] Raw data: {data}")
+            return
 
-            continue
+        if addr not in self.groups[group_id]:
+            self.groups[group_id].append(addr)
+            print(f"[Server] {addr} joined group '{group_id}'. Current members: {self.groups[group_id]}")
 
-        if addr not in groups[group_id]:
-            groups[group_id].append(addr)
-            print(f"[Server] {addr} joined group '{group_id}'. Current members: {groups[group_id]}")
+        self.sock.sendto(b'ready', addr)
 
-        # Always acknowledge the peer
-        sock.sendto(b'ready', addr)
-
-        # Collect current members again
-        members = groups[group_id]
-
-        # Notify the newly joined peer of all others
+        members = self.groups[group_id]
         for peer in members:
             if peer != addr:
                 info = f"{peer[0]} {peer[1]} {peer[1]}"
-                sock.sendto(info.encode(), addr)
+                self.sock.sendto(info.encode(), addr)
 
-        # Notify all other peers of the new peer only
         for peer in members:
             if peer != addr:
                 info = f"{addr[0]} {addr[1]} {addr[1]}"
-                sock.sendto(info.encode(), peer)
+                self.sock.sendto(info.encode(), peer)
 
-except Exception as e:
-    print(f"[Server] Error: {e}")
-finally:
-    print("[Server] Cleaning up socket.")
-    sock.close()
+    def shutdown_handler(self, signum, frame):
+        print("\n[Server] Shutting down gracefully...")
+        self.running = False
+
+    def cleanup(self):
+        print("[Server] Cleaning up socket.")
+        self.sock.close()
+
+
+if __name__ == '__main__':
+    server = UDPRendezvousServer()
+    server.start()

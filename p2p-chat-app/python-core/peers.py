@@ -1,15 +1,13 @@
-# peers.py
-
 import json
 import os
 import base64
 from datetime import datetime
 
+DB_FILE = "known_peers.json"
+
 def log(message: str):
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     print(f"[{timestamp}] {message}")
-
-DB_FILE = "known_peers.json"
 
 def load_known_peers():
     if not os.path.exists(DB_FILE):
@@ -21,6 +19,10 @@ def load_known_peers():
         log("Failed to load known_peers.json. Starting with empty peer DB.")
         return {}
 
+def save_known_peers(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
 def save_peer_salt(peer_id: str, salt: bytes, group_id: str = None):
     db = load_known_peers()
     key = f"{group_id}:{peer_id}" if group_id else peer_id
@@ -28,11 +30,24 @@ def save_peer_salt(peer_id: str, salt: bytes, group_id: str = None):
         "peer_id": peer_id,
         "group_id": group_id,
         "salt": base64.b64encode(salt).decode(),
-        "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+        "last_seen": datetime.utcnow().isoformat()
     }
-    with open(DB_FILE, "w") as f:
-        json.dump(db, f, indent=2)
-    log(f"Saved salt for peer '{peer_id}' in group '{group_id}' at {db[key]['timestamp']}: {db[key]['salt']}")
+    save_known_peers(db)
+    log(f"Saved salt for peer '{peer_id}' in group '{group_id}' at {db[key]['timestamp']}")
+
+def update_last_seen(peer_id: str, group_id: str = None):
+    db = load_known_peers()
+    key = f"{group_id}:{peer_id}" if group_id else peer_id
+    if key in db:
+        db[key]["last_seen"] = datetime.utcnow().isoformat()
+    else:
+        db[key] = {
+            "peer_id": peer_id,
+            "group_id": group_id,
+            "last_seen": datetime.utcnow().isoformat()
+        }
+    save_known_peers(db)
 
 def get_peer_salt(peer_id: str, group_id: str = None):
     db = load_known_peers()
@@ -48,3 +63,11 @@ def get_peer_salt(peer_id: str, group_id: str = None):
     except base64.binascii.Error:
         log(f"Invalid salt format for peer '{key}'")
         return None
+
+def load_last_seen():
+    db = load_known_peers()
+    result = {}
+    for peer_id, data in db.items():
+        if isinstance(data, dict) and "last_seen" in data:
+            result[peer_id] = data["last_seen"]
+    return result

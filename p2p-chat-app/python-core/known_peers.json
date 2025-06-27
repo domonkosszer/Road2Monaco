@@ -1,32 +1,23 @@
 {
-  "127.0.0.1:56743": "gfewiyTe9sUogKFi30Gcxg==",
-  "127.0.0.1:63537": "gfewiyTe9sUogKFi30Gcxg==",
-  "127.0.0.1:62860": "gfewiyTe9sUogKFi30Gcxg==",
-  "127.0.0.1:55900": "gfewiyTe9sUogKFi30Gcxg==",
-  "127.0.0.1:51250": "5Ok/PI6Niq3/qhr6PkKcxA==",
-  "127.0.0.1:55358": "5Ok/PI6Niq3/qhr6PkKcxA==",
-  "127.0.0.1:59872": "5Ok/PI6Niq3/qhr6PkKcxA==",
-  "127.0.0.1:56252": "MFpQpyhEW8d4GU/jdq9JZg==",
-  "127.0.0.1:60518": "IzfMIkU0/1UpOxz/p7bokg==",
-  "127.0.0.1:64347": "8Zf+yeLnXX0zUufl1JitpA==",
-  "127.0.0.1:61448": "8Zf+yeLnXX0zUufl1JitpA==",
-  "127.0.0.1:54756": "IuvkQYBCq40oL23l/vaCfw==",
-  "127.0.0.1:62510": "nJZQk3tOw5vP+Ha0pNP8Hw==",
-  "127.0.0.1:62439": "xUvlrzkPUAtdyvgM8kIDkg==",
-  "127.0.0.1:53661": "xUvlrzkPUAtdyvgM8kIDkg==",
-  "127.0.0.1:50977": "xUvlrzkPUAtdyvgM8kIDkg==",
-  "127.0.0.1:64235": "li4WbP//uAt17SFceuWYEA==",
-  "127.0.0.1:58969": "li4WbP//uAt17SFceuWYEA==",
-  "127.0.0.1:52484": "dPDoZt+Ge4SdPOiIKJ0OUw==",
-  "127.0.0.1:54087": "hxqgviqgYpnj3bl85dcMUA==",
-  "127.0.0.1:60235": "aGmwHjJPLagtwgdoXxHYXw==",
-  "127.0.0.1:57315": "2vRgvpmPYWBa7xjkPv6Jxw==",
-  "127.0.0.1:62110": {
-    "salt": "Hoo/vZU/li2OsaNt+WvDyw==",
-    "timestamp": "2025-06-26 13:34:08"
+  "Spot:127.0.0.1:59763": {
+    "peer_id": "127.0.0.1:59763",
+    "group_id": "Spot",
+    "salt": "lZBENePTPxipY3el9KsB1g==",
+    "timestamp": "2025-06-27 09:02:53",
+    "last_seen": "2025-06-27T09:03:41.488204"
   },
-  "127.0.0.1:54056": {
-    "salt": "d8dk5w7qurSzf8wBbSC+zQ==",
-    "timestamp": "2025-06-26 13:34:08"
+  "Spot:127.0.0.1:65516": {
+    "peer_id": "127.0.0.1:65516",
+    "group_id": "Spot",
+    "salt": "EJt1134S/CMUz82MFi5xIQ==",
+    "timestamp": "2025-06-27 09:02:48",
+    "last_seen": "2025-06-27T09:03:41.487595"
+  },
+  "Spot:127.0.0.1:59533": {
+    "peer_id": "127.0.0.1:59533",
+    "group_id": "Spot",
+    "salt": "qmignUE5lfXLo7JZjkpH5A==",
+    "timestamp": "2025-06-27 09:03:02",
+    "last_seen": "2025-06-27T09:03:41.486025"
   }
 }
