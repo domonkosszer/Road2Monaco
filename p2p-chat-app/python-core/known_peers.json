@@ -1,23 +1,30 @@
 {
-  "Spot:127.0.0.1:59763": {
-    "peer_id": "127.0.0.1:59763",
-    "group_id": "Spot",
-    "salt": "lZBENePTPxipY3el9KsB1g==",
-    "timestamp": "2025-06-27 09:02:53",
-    "last_seen": "2025-06-27T09:03:41.488204"
+  "Hub:127.0.0.1:60295": {
+    "peer_id": "127.0.0.1:60295",
+    "group_id": "Hub",
+    "salt": "+6y6bXBUR7GVCLQJu3iSkg==",
+    "timestamp": "2025-06-27 09:12:04",
+    "last_seen": "2025-06-27T09:12:15.647865"
   },
-  "Spot:127.0.0.1:65516": {
-    "peer_id": "127.0.0.1:65516",
-    "group_id": "Spot",
-    "salt": "EJt1134S/CMUz82MFi5xIQ==",
-    "timestamp": "2025-06-27 09:02:48",
-    "last_seen": "2025-06-27T09:03:41.487595"
+  "Hub:127.0.0.1:50879": {
+    "peer_id": "127.0.0.1:50879",
+    "group_id": "Hub",
+    "salt": "8j5yek8imHBPViDS9dWSjA==",
+    "timestamp": "2025-06-27 09:12:04",
+    "last_seen": "2025-06-27T09:12:15.177153"
   },
-  "Spot:127.0.0.1:59533": {
-    "peer_id": "127.0.0.1:59533",
+  "Spot:127.0.0.1:54208": {
+    "peer_id": "127.0.0.1:54208",
     "group_id": "Spot",
-    "salt": "qmignUE5lfXLo7JZjkpH5A==",
-    "timestamp": "2025-06-27 09:03:02",
-    "last_seen": "2025-06-27T09:03:41.486025"
+    "salt": "Wmm8gQNbhAAYmlUyCXDeJA==",
+    "timestamp": "2025-06-27 09:19:26",
+    "last_seen": "2025-06-27T09:19:46.709044"
+  },
+  "Spot:127.0.0.1:57527": {
+    "peer_id": "127.0.0.1:57527",
+    "group_id": "Spot",
+    "salt": "kDf9ELUf2toYRpNUYvJfiw==",
+    "timestamp": "2025-06-27 09:19:26",
+    "last_seen": "2025-06-27T09:19:46.712852"
   }
 }
