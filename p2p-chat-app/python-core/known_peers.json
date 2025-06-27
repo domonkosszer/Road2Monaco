@@ -26,5 +26,182 @@
     "salt": "kDf9ELUf2toYRpNUYvJfiw==",
     "timestamp": "2025-06-27 09:19:26",
     "last_seen": "2025-06-27T09:19:46.712852"
+  },
+  "Spot:127.0.0.1:61437": {
+    "peer_id": "127.0.0.1:61437",
+    "group_id": "Spot",
+    "salt": "wlYGlFnyyYm+l+qNFr/EHg==",
+    "timestamp": "2025-06-27 09:40:22",
+    "last_seen": "2025-06-27T09:40:42.441455"
+  },
+  "Spot:127.0.0.1:53908": {
+    "peer_id": "127.0.0.1:53908",
+    "group_id": "Spot",
+    "last_seen": "2025-06-27T09:40:42.979727"
+  },
+  "Spot:127.0.0.1:65301": {
+    "peer_id": "127.0.0.1:65301",
+    "group_id": "Spot",
+    "salt": "TT6W4+zNeD8xfYAxGIc5UQ==",
+    "timestamp": "2025-06-27 13:36:42",
+    "last_seen": "2025-06-27T13:37:03.483420"
+  },
+  "Spot:127.0.0.1:59717": {
+    "peer_id": "127.0.0.1:59717",
+    "group_id": "Spot",
+    "salt": "d0sBBmxm7LTCaGmgmMZ78Q==",
+    "timestamp": "2025-06-27 13:36:48",
+    "last_seen": "2025-06-27T13:37:03.479051"
+  },
+  "Spot:127.0.0.1:59361": {
+    "peer_id": "127.0.0.1:59361",
+    "group_id": "Spot",
+    "salt": "vJcJLnAXRlScksRWApCXrg==",
+    "timestamp": "2025-06-27 13:36:30",
+    "last_seen": "2025-06-27T13:37:03.428591"
+  },
+  "Spot:127.0.0.1:52154": {
+    "peer_id": "127.0.0.1:52154",
+    "group_id": "Spot",
+    "salt": "PqqSbTgVHI/cMg0vNg8DSw==",
+    "timestamp": "2025-06-27 13:41:16",
+    "last_seen": "2025-06-27T13:42:40.814062"
+  },
+  "Spot:127.0.0.1:52104": {
+    "peer_id": "127.0.0.1:52104",
+    "group_id": "Spot",
+    "last_seen": "2025-06-27T13:42:40.866457"
+  },
+  "Spot:127.0.0.1:62481": {
+    "peer_id": "127.0.0.1:62481",
+    "group_id": "Spot",
+    "salt": "PpsQCEa+9iPrZ9ND3zQY3w==",
+    "timestamp": "2025-06-27 13:41:45",
+    "last_seen": "2025-06-27T13:42:34.430283"
+  },
+  "Spot:127.0.0.1:62082": {
+    "peer_id": "127.0.0.1:62082",
+    "group_id": "Spot",
+    "salt": "4NJ1BSoEfSaP58MrcuNFIA==",
+    "timestamp": "2025-06-27 13:46:19",
+    "last_seen": "2025-06-27T13:46:47.595672"
+  },
+  "Spot:127.0.0.1:51797": {
+    "peer_id": "127.0.0.1:51797",
+    "group_id": "Spot",
+    "salt": "K/1M/7P3iEqNWVYHFSGMEQ==",
+    "timestamp": "2025-06-27 13:46:19",
+    "last_seen": "2025-06-27T13:46:47.597892"
+  },
+  "Spot:127.0.0.1:56027": {
+    "peer_id": "127.0.0.1:56027",
+    "group_id": "Spot",
+    "salt": "KUz/0yRj6shpNd/hQLA0vQ==",
+    "timestamp": "2025-06-27 13:46:20",
+    "last_seen": "2025-06-27T13:46:47.545008"
+  },
+  "spot:127.0.0.1:49992": {
+    "peer_id": "127.0.0.1:49992",
+    "group_id": "spot",
+    "last_seen": "2025-06-27T13:48:35.925856"
+  },
+  "spot:127.0.0.1:56107": {
+    "peer_id": "127.0.0.1:56107",
+    "group_id": "spot",
+    "salt": "/OVsbaOk9IECBJf1BmeTUA==",
+    "timestamp": "2025-06-27 13:48:21",
+    "last_seen": "2025-06-27T13:48:35.923765"
+  },
+  "Spot:127.0.0.1:51764": {
+    "peer_id": "127.0.0.1:51764",
+    "group_id": "Spot",
+    "salt": "6slthsTcJXrny/RovEUEJg==",
+    "timestamp": "2025-06-27 13:49:52",
+    "last_seen": "2025-06-27T13:50:02.498767"
+  },
+  "Spot:127.0.0.1:60513": {
+    "peer_id": "127.0.0.1:60513",
+    "group_id": "Spot",
+    "salt": "daCo5ZlIqbZllA0pcVdtNg==",
+    "timestamp": "2025-06-27 13:49:52",
+    "last_seen": "2025-06-27T13:50:02.503767"
+  },
+  "Spot:127.0.0.1:58663": {
+    "peer_id": "127.0.0.1:58663",
+    "group_id": "Spot",
+    "salt": "62Oi+hP3yw+gliBLXl//wg==",
+    "timestamp": "2025-06-27 13:51:19",
+    "last_seen": "2025-06-27T13:51:36.025159"
+  },
+  "Spot:127.0.0.1:54212": {
+    "peer_id": "127.0.0.1:54212",
+    "group_id": "Spot",
+    "salt": "+0YzNIKeLtRj1Duy3um9BA==",
+    "timestamp": "2025-06-27 13:51:19",
+    "last_seen": "2025-06-27T13:51:36.070871"
+  },
+  "Spot:127.0.0.1:58301": {
+    "peer_id": "127.0.0.1:58301",
+    "group_id": "Spot",
+    "salt": "olPAT34tHIDsxbm/wDlUDQ==",
+    "timestamp": "2025-06-27 13:51:20",
+    "last_seen": "2025-06-27T13:51:36.073336"
+  },
+  "spot:127.0.0.1:57427": {
+    "peer_id": "127.0.0.1:57427",
+    "group_id": "spot",
+    "last_seen": "2025-06-27T13:56:07.417298"
+  },
+  "Spot:127.0.0.1:59064": {
+    "peer_id": "127.0.0.1:59064",
+    "group_id": "Spot",
+    "salt": "Waq7eqkiOE4cx0cXuhSpfQ==",
+    "timestamp": "2025-06-27 13:59:20",
+    "last_seen": "2025-06-27T13:59:44.384485"
+  },
+  "Spot:127.0.0.1:55070": {
+    "peer_id": "127.0.0.1:55070",
+    "group_id": "Spot",
+    "salt": "38ziJKJppSgTo/Sys7v+9Q==",
+    "timestamp": "2025-06-27 13:59:20",
+    "last_seen": "2025-06-27T13:59:44.378293"
+  },
+  "Spot:127.0.0.1:63060": {
+    "peer_id": "127.0.0.1:63060",
+    "group_id": "Spot",
+    "salt": "Xq9wUyE7FIVckt+tEj5yKg==",
+    "timestamp": "2025-06-27 14:02:48",
+    "last_seen": "2025-06-27T14:03:08.539763"
+  },
+  "Spot:127.0.0.1:60943": {
+    "peer_id": "127.0.0.1:60943",
+    "group_id": "Spot",
+    "salt": "t3KcEvBopIhV0rHnFxg1sQ==",
+    "timestamp": "2025-06-27 14:02:48",
+    "last_seen": "2025-06-27T14:03:08.546607"
+  },
+  "hubi:127.0.0.1:51079": {
+    "peer_id": "127.0.0.1:51079",
+    "group_id": "hubi",
+    "salt": "66Yov1Mr2VBK0Xjc31KAzQ==",
+    "timestamp": "2025-06-27 14:04:07",
+    "last_seen": "2025-06-27T14:04:10.502941"
+  },
+  "hubi:127.0.0.1:52146": {
+    "peer_id": "127.0.0.1:52146",
+    "group_id": "hubi",
+    "last_seen": "2025-06-27T14:04:10.498051"
+  },
+  "Spot:127.0.0.1:59564": {
+    "peer_id": "127.0.0.1:59564",
+    "group_id": "Spot",
+    "last_seen": "2025-06-27T14:05:44.654505"
+  },
+  "Spot:127.0.0.1:50406": {
+    "peer_id": "127.0.0.1:50406",
+    "group_id": "Spot",
+    "salt": "u4TrxBu5g33NVlMRaQtjhA==",
+    "timestamp": "2025-06-27 14:05:34",
+    "last_seen": "2025-06-27T14:05:44.659165"
   }
 }

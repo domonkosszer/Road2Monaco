@@ -74,6 +74,13 @@ class UDPP2PChatClient:
                             print(f"\nNew peer joined: {peer}\n> ", end='')
                             self.sock.sendto(b'punch', (peer.ip, peer.dport))
                             self.sock.sendto(b'punch', (peer.ip, peer.sport))
+                            if self.encryption_handler:
+                                intro_msg = MessageFormatter.create_message(self.username, {"text": "[intro]"}, {
+                                    "salt": base64.b64encode(self.encryption_handler.salt).decode()
+                                })
+                                for _ in range(3):
+                                    self.sock.sendto(intro_msg.encode(), (peer.ip, peer.sport))
+                                    time.sleep(0.2)
                         continue
 
                 peer_id = self.resolve_peer_id(addr)
@@ -176,7 +183,8 @@ class UDPP2PChatClient:
     def wait_for_salt(self):
         while not self.shared_state["salt_loaded"]:
             time.sleep(0.1)
-        print("You can now chat:")
+        threading.Timer(0.5, lambda: print("You can now chat:")).start()
+        # print("You can now chat:")
 
     def send_intro(self):
         salt = os.urandom(16)
